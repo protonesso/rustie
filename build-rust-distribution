@@ -2,6 +2,16 @@
 
 set -e
 
+if [ -z $TOOLS ]; then
+	echo "You haven't set 'TOOLS' variable."
+	exit 1
+fi
+
+if [ -z $ROOTFS ]; then
+	echo "You haven't set 'ROOTFS' variable."
+	exit 1
+fi
+
 export CWD="$(pwd)"
 export STUFF="$CWD/stuff"
 export OUT="$CWD/out"
@@ -20,7 +30,7 @@ case $BARCH in
 esac
 
 export LC_ALL="POSIX"
-export PATH="$OUT/$XHOST-cross/bin:$PATH"
+export PATH="$TOOLS/bin:$PATH"
 export HOSTCC="gcc"
 export HOSTCXX="g++"
 
@@ -32,10 +42,6 @@ export MKOPTS="-j$MKJOBS"
 
 rm -rf $OUT
 mkdir -p $SRC
-
-cd $OUT
-wget http://musl.cc/$XHOST-cross.tgz
-tar -xvf $XHOST-cross.tgz
 
 cd $SRC
 wget https://static.rust-lang.org/dist/rustc-$RUSTVER-src.tar.gz
@@ -64,7 +70,7 @@ target = [
 ]
 cargo = "$(which cargo)"
 rustc = "$(which rustc)"
-docs = true
+docs = false
 compiler-docs = false
 submodules = false
 full-bootstrap = false
@@ -94,7 +100,7 @@ cxx = "$XHOST-g++"
 linker = "$XHOST-gcc"
 EOF
 
-export MUSL_ROOT=$OUT/$XHOST-cross/$XHOST
+export MUSL_ROOT=$ROOTFS/usr
 export RUST_BACKTRACE=1
 export RUSTFLAGS="-C linker=$XHOST-gcc"
 
