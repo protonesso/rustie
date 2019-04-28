@@ -1,0 +1,101 @@
+#!/bin/bash
+
+set -e
+
+export CWD="$(pwd)"
+export STUFF="$CWD/stuff"
+export OUT="$CWD/out"
+export SRC="$OUT/src"
+
+export RUSTVER="1.34.1"
+
+case $BARCH in
+	x86_64)
+		export XHOST="x86_64-linux-musl"
+		export XTARGET="x86_64-unknown-linux-musl"
+		;;
+	*)
+		echo "Architecture is not set or is not supported by 'bootstrap' script"
+		exit 1
+esac
+
+export LC_ALL="POSIX"
+export PATH="$OUT/$XHOST-cross/bin:$PATH"
+export HOSTCC="gcc"
+export HOSTCXX="g++"
+
+if [ -z $MKJOBS ]; then
+	export MKJOBS="$(expr $(nproc) + 1)"
+fi
+
+export MKOPTS="-j$MKJOBS"
+
+rm -rf $OUT
+mkdir -p $SRC
+
+cd $OUT
+wget http://musl.cc/$XHOST-cross.tgz
+tar -xvf $XHOST-cross.tgz
+
+cd $SRC
+wget https://static.rust-lang.org/dist/rustc-$RUSTVER-src.tar.gz
+tar -xvf rustc-$RUSTVER-src.tar.gz
+cd rustc-$RUSTVER-src
+patch -Np1 -i $STUFF/libunwind.patch
+patch -Np1 -i $STUFF/link-musl-dynamically.patch
+patch -Np1 -i $STUFF/musl-dont-use-crt-static.patch
+
+cat << EOF > config.toml
+[llvm]
+optimize = true
+release-debuginfo = false
+assertions = false
+static-libstdcpp = true
+ninja = true
+targets = "AArch64;ARM;Mips;PowerPC;Sparc;X86"
+experimental-targets = ""
+
+[build]
+host = [
+  "$XHOST"
+]
+target = [
+  "$XTARGET"
+]
+cargo = "$(which cargo)"
+rustc = "$(which rustc)"
+docs = true
+compiler-docs = false
+submodules = false
+full-bootstrap = false
+extended = true
+verbose = 0
+sanitizers = false
+profiler = false
+
+[rust]
+optimize = true
+codegen-units = 1
+debug-assertions = false
+debuginfo = false
+debuginfo-lines = false
+jemalloc = false
+backtrace = true
+default-linker = "gcc"
+channel = "stable"
+rpath = true
+
+[dist]
+src-tarball = false
+
+[target.$XTARGET]
+cc = "$XHOST-gcc"
+cxx = "$XHOST-g++"
+linker = "$XHOST-gcc"
+EOF
+
+export MUSL_ROOT=$OUT/$XHOST-cross/$XHOST
+export RUST_BACKTRACE=1
+export RUSTFLAGS="-C linker=$XHOST-gcc"
+
+./x.py dist $MKOPTS
