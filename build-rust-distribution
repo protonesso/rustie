@@ -79,9 +79,7 @@ cd $SRC
 wget https://static.rust-lang.org/dist/rustc-$RUSTVER-src.tar.gz
 tar -xvf rustc-$RUSTVER-src.tar.gz
 cd rustc-$RUSTVER-src
-patch -Np1 -i $STUFF/libunwind.patch
-patch -Np1 -i $STUFF/link-musl-dynamically.patch
-patch -Np1 -i $STUFF/musl-dont-use-crt-static.patch
+patch -Np1 -i $STUFF/musl-and-security.patch
 
 cat << EOF > config.toml
 [llvm]
