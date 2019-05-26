@@ -108,6 +108,7 @@ extended = true
 verbose = 0
 sanitizers = false
 profiler = false
+vendor = true
 
 [rust]
 optimize = true
