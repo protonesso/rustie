@@ -17,7 +17,7 @@ export STUFF="$CWD/stuff"
 export OUT="$CWD/out"
 export SRC="$OUT/src"
 
-export RUSTVER="1.35.0"
+export RUSTVER="1.34.2"
 
 case $BARCH in
 	x86_64)
