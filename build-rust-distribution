@@ -17,44 +17,16 @@ export STUFF="$CWD/stuff"
 export OUT="$CWD/out"
 export SRC="$OUT/src"
 
-export RUSTVER="1.35.0"
+export RUSTVER="1.41.0"
 
 case $BARCH in
-	x86_64)
-		export XHOST="x86_64-linux-musl"
-		export XTARGET="x86_64-unknown-linux-musl"
+	i586)
+		export XHOST="i586-linux-musl"
+		export XTARGET="i586-unknown-linux-musl"
 		;;
 	aarch64)
 		export XHOST="aarch64-linux-musl"
 		export XTARGET="aarch64-unknown-linux-musl"
-		;;
-	armv7l)
-		export XHOST="arm-linux-musleabihf"
-		export XTARGET="armv7-unknown-linux-musleabihf"
-		;;
-	armv6l)
-		export XHOST="arm-linux-musleabihf"
-		export XTARGET="arm-unknown-linux-musleabihf"
-		;;
-	mips)
-		export XHOST="mips-linux-musl"
-		export XTARGET="mips-unknown-linux-musl"
-		;;
-	mipsel)
-		export XHOST="mipsel-linux-musl"
-		export XTARGET="mipsel-unknown-linux-musl"
-		;;
-	ppc64le)
-		export XHOST="powerpc64le-linux-musl"
-		export XTARGET="powerpc64le-unknown-linux-musl"
-		;;
-	ppc64)
-		export XHOST="powerpc64-linux-musl"
-		export XTARGET="powerpc64-unknown-linux-musl"
-		;;
-	ppc)
-		export XHOST="powerpc64-linux-musl"
-		export XTARGET="powerpc64-unknown-linux-musl"
 		;;
 	*)
 		echo "Architecture is not set or is not supported by 'bootstrap' script"
