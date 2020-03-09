@@ -24,7 +24,7 @@ if [ -z $MKOPTS ]; then
 	export MKJOBS="$(expr $(nproc) + 1)"
 fi
 
-export MKOPTS="-j$MKOPTS"
+export MKOPTS="-j$MKJOBS"
 
 rm -rf $OUT
 mkdir -p $SRC $TOOLS
@@ -197,4 +197,4 @@ EOF
 
 export RUST_BACKTRACE=1
 
-./x.py dist $MKOPTS
+./x.py dist -j$MKJOBS
