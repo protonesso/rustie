@@ -2,56 +2,48 @@
 
 set -e
 
-if [ -z $TOOLS ]; then
-	echo "You haven't set 'TOOLS' variable."
-	exit 1
-fi
-
-if [ -z $ROOTFS ]; then
-	echo "You haven't set 'ROOTFS' variable."
-	exit 1
-fi
+clear_vendor_checksums() {
+	sed -i 's/\("files":{\)[^}]*/\1/' vendor/$1/.cargo-checksum.json
+}
 
 export CWD="$(pwd)"
 export STUFF="$CWD/stuff"
 export OUT="$CWD/out"
 export SRC="$OUT/src"
+export TOOLS="$OUT/tools"
 
-export RUSTVER="1.41.0"
-
-case $BARCH in
-	i586)
-		export XHOST="i586-linux-musl"
-		export XTARGET="i586-unknown-linux-musl"
-		;;
-	aarch64)
-		export XHOST="aarch64-linux-musl"
-		export XTARGET="aarch64-unknown-linux-musl"
-		;;
-	*)
-		echo "Architecture is not set or is not supported by 'bootstrap' script"
-		exit 1
-esac
+export RUSTVER="1.41.1"
 
 export LC_ALL="POSIX"
-export PATH="$TOOLS/bin:$PATH"
+export PATH="$TOOLS/x86_64-linux-musl-cross/bin:$TOOLS/i486-linux-musl-cross/bin:$TOOLS/aarch64-linux-musl-cross/bin:$TOOLS/armv7l-linux-musleabihf-cross/bin:$TOOLS/arm-linux-musleabi-cross/bin:$PATH"
 export HOSTCC="gcc"
 export HOSTCXX="g++"
 
 if [ -z $MKJOBS ]; then
 	export MKJOBS="$(expr $(nproc) + 1)"
+	export MAKEOPTS="$MKJOBS"
 fi
 
 export MKOPTS="-j$MKJOBS"
 
 rm -rf $OUT
-mkdir -p $SRC
+mkdir -p $SRC $TOOLS
 
 cd $SRC
+
+for i in x86_64-linux-musl i486-linux-musl aarch64-linux-musl armv7l-linux-musleabihf arm-linux-musleabi; do
+	wget https://musl.cc/${i}-cross.tgz
+	tar -C $TOOLS -xvf ${i}-cross.tgz
+	pushd $TOOLS/${i}-cross/${i}
+		ln -sf . usr
+	popd
+done
+
 wget https://static.rust-lang.org/dist/rustc-$RUSTVER-src.tar.gz
 tar -xvf rustc-$RUSTVER-src.tar.gz
 cd rustc-$RUSTVER-src
 patch -Np1 -i $STUFF/musl-and-security.patch
+clear_vendor_checksums libc
 
 cat << EOF > config.toml
 [llvm]
@@ -68,7 +60,11 @@ host = [
   "$XHOST"
 ]
 target = [
-  "$XTARGET"
+  "x86_64-unknown-linux-musl",
+  "i586-unknown-linux-musl",
+  "aarch64-unknown-linux-musl",
+  "armv7-unknown-linux-musleabihf",
+  "armv5te-unknown-linux-musleabi"
 ]
 cargo = "$(which cargo)"
 rustc = "$(which rustc)"
@@ -83,28 +79,55 @@ profiler = false
 vendor = true
 
 [rust]
-optimize = true
-codegen-units = 1
-debug-assertions = false
-debuginfo = false
-debuginfo-lines = false
-jemalloc = false
-backtrace = true
-default-linker = "gcc"
 channel = "stable"
-rpath = true
+default-linker = "gcc"
+rpath = false
+codegen-units = 1
+debuginfo-level = 2
+backtrace = true
+jemalloc = false
+codegen-tests = false
+optimize = true
 
 [dist]
 src-tarball = false
 
-[target.$XTARGET]
-cc = "$XHOST-gcc"
-cxx = "$XHOST-g++"
-linker = "$XHOST-gcc"
+[target.x86_64-unknown-linux-musl]
+cc = "x86_64-linux-musl-gcc"
+cxx = "x86_64-linux-musl-g++"
+linker = "x86_64-linux-musl-gcc"
+musl-root = "$TOOLS/x86_64-linux-musl-cross/x86_64-linux-musl"
+crt-static = false
+
+[target.i586-unknown-linux-musl]
+cc = "i486-linux-musl-gcc"
+cxx = "i486-linux-musl-g++"
+linker = "i486-linux-musl-gcc"
+musl-root = "$TOOLS/i486-linux-musl-cross/i486-linux-musl"
+crt-static = false
+
+[target.aarch64-unknown-linux-musl]
+cc = "aarch64-linux-musl-gcc"
+cxx = "aarch64-linux-musl-g++"
+linker = "aarch64-linux-musl-gcc"
+musl-root = "$TOOLS/aarch64-linux-musl-cross/aarch64-linux-musl"
+crt-static = false
+
+[target.armv7-unknown-linux-musleabihf]
+cc = "armv7l-linux-musleabihf-gcc"
+cxx = "armv7l-linux-musleabihf-g++"
+linker = "armv7l-linux-musleabihf-gcc"
+musl-root = "$TOOLS/armv7l-linux-musleabihf-cross/armv7l-linux-musleabihf"
+crt-static = false
+
+[target.armv5te-unknown-linux-musleabi]
+cc = "arm-linux-musleabi-gcc"
+cxx = "arm-linux-musleabi-g++"
+linker = "arm-linux-musleabi-gcc"
+musl-root = "$TOOLS/arm-linux-musleabi-cross/arm-linux-musleabi"
+crt-static = false
 EOF
 
-export MUSL_ROOT=$ROOTFS/usr
 export RUST_BACKTRACE=1
-export RUSTFLAGS="-C linker=$XHOST-gcc"
 
 ./x.py dist $MKOPTS
