@@ -22,7 +22,7 @@ export XHOST="$(echo ${MACHTYPE} | sed -e 's/-[^-]*/-cross/')"
 
 if [ -z $MKJOBS ]; then
 	export MKJOBS="$(expr $(nproc) + 1)"
-	export MAKEOPTS="$MKJOBS"
+	export MAKEFLAGS="$MKJOBS"
 fi
 
 export MKOPTS="-j$MKJOBS"
@@ -52,40 +52,43 @@ for i in x86_64-linux-musl i486-linux-musl aarch64-linux-musl armv7l-linux-musle
 	export PKG_CONFIG_PATH="$$TOOLS/${i}-cross/${i}/lib/pkgconfig:$TOOLS/${i}-cross/${i}/share/pkgconfig"
 	export PKG_CONFIG_SYSROOT_DIR="$TOOLS/${i}-cross/${i}"
 
-	cd libz-1.2.8.2015.12.26
+	cd $SRC/libz-1.2.8.2015.12.26
 	mkdir build-$i
 	cd build-$i
-	./configure \
+	../configure \
 		--build=$XHOST \
 		--host=$i \
-		--prefix=$TOOLS/${i}-cross/${i}
+		--prefix=$TOOLS/${i}-cross/${i} \
+		--disable-shared
 	make
 	make install
 
-	cd libressl-3.0.2
+	cd $SRC/libressl-3.0.2
 	mkdir build-$i
 	cd build-$i
-	./configure \
+	../configure \
 		--build=$XHOST \
 		--host=$i \
-		--prefix=$TOOLS/${i}-cross/${i}
+		--prefix=$TOOLS/${i}-cross/${i} \
+		--disable-shared
 	make
 	make install
 
-	cd libssh2-1.9.0
+	cd $SRC/libssh2-1.9.0
 	mkdir build-$i
 	cd build-$i
-	./configure \
+	../configure \
 		--build=$XHOST \
 		--host=$i \
-		--prefix=$TOOLS/${i}-cross/${i}
+		--prefix=$TOOLS/${i}-cross/${i} \
+		--disable-shared
 	make
 	make install
 
-	cd curl-7.69.0
+	cd $SRC/curl-7.69.0
 	mkdir build-$i
 	cd build-$i
-	./configure \
+	../configure \
 		--build=$XHOST \
 		--host=$i \
 		--prefix=$TOOLS/${i}-cross/${i} \
@@ -93,7 +96,8 @@ for i in x86_64-linux-musl i486-linux-musl aarch64-linux-musl armv7l-linux-musle
 		--with-ca-bundle=/etc/ssl/certs/ca-certificates.crt \
 		--with-ca-path=/etc/ssl/certs \
 		--without-librtmp \
-		--enable-ipv6
+		--enable-ipv6 \
+		--disable-shared
 	make
 	make install
 done
