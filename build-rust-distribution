@@ -18,6 +18,7 @@ export LC_ALL="POSIX"
 export PATH="$TOOLS/x86_64-linux-musl-cross/bin:$TOOLS/i486-linux-musl-cross/bin:$TOOLS/aarch64-linux-musl-cross/bin:$TOOLS/armv7l-linux-musleabihf-cross/bin:$TOOLS/arm-linux-musleabi-cross/bin:$PATH"
 export HOSTCC="gcc"
 export HOSTCXX="g++"
+export XHOST="$(echo ${MACHTYPE} | sed -e 's/-[^-]*/-cross/')"
 
 if [ -z $MKJOBS ]; then
 	export MKJOBS="$(expr $(nproc) + 1)"
@@ -39,6 +40,65 @@ for i in x86_64-linux-musl i486-linux-musl aarch64-linux-musl armv7l-linux-musle
 	popd
 done
 
+wget https://sortix.org/libz/release/libz-1.2.8.2015.12.26.tar.gz
+wget https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-3.0.2.tar.gz
+wget https://www.libssh2.org/download/libssh2-1.9.0.tar.gz
+wget https://curl.haxx.se/download/curl-7.69.0.tar.xz
+tar -xvf libz-1.2.8.2015.12.26.tar.gz
+tar -xvf libressl-3.0.2.tar.gz
+tar -xvf libssh2-1.9.0.tar.gz
+tar -xvf curl-7.69.0.tar.xz
+for i in x86_64-linux-musl i486-linux-musl aarch64-linux-musl armv7l-linux-musleabihf arm-linux-musleabi; do
+	export PKG_CONFIG_PATH="$$TOOLS/${i}-cross/${i}/lib/pkgconfig:$TOOLS/${i}-cross/${i}/share/pkgconfig"
+	export PKG_CONFIG_SYSROOT_DIR="$TOOLS/${i}-cross/${i}"
+
+	cd libz-1.2.8.2015.12.26
+	mkdir build-$i
+	cd build-$i
+	./configure \
+		--build=$XHOST \
+		--host=$i \
+		--prefix=$TOOLS/${i}-cross/${i}
+	make
+	make install
+
+	cd libressl-3.0.2
+	mkdir build-$i
+	cd build-$i
+	./configure \
+		--build=$XHOST \
+		--host=$i \
+		--prefix=$TOOLS/${i}-cross/${i}
+	make
+	make install
+
+	cd libssh2-1.9.0
+	mkdir build-$i
+	cd build-$i
+	./configure \
+		--build=$XHOST \
+		--host=$i \
+		--prefix=$TOOLS/${i}-cross/${i}
+	make
+	make install
+
+	cd curl-7.69.0
+	mkdir build-$i
+	cd build-$i
+	./configure \
+		--build=$XHOST \
+		--host=$i \
+		--prefix=$TOOLS/${i}-cross/${i} \
+		--with-ssl \
+		--with-ca-bundle=/etc/ssl/certs/ca-certificates.crt \
+		--with-ca-path=/etc/ssl/certs \
+		--without-librtmp \
+		--enable-ipv6
+	make
+	make install
+done
+
+cd $SRC
 wget https://static.rust-lang.org/dist/rustc-$RUSTVER-src.tar.gz
 tar -xvf rustc-$RUSTVER-src.tar.gz
 cd rustc-$RUSTVER-src
