@@ -31,7 +31,7 @@ mkdir -p $SRC $TOOLS
 
 cd $SRC
 
-for i in x86_64-linux-musl i486-linux-musl aarch64-linux-musl armv7l-linux-musleabihf arm-linux-musleabi; do
+for i in x86_64-linux-musl i486-linux-musl aarch64-linux-musl armv7l-linux-musleabihf arm-linux-musleabi mips-linux-musl mipsel-linux-musl powerpc64le-linux-musl powerpc64-linux-musl powerpc-linux-musl riscv64-linux-musl; do
 	wget https://musl.cc/${i}-cross.tgz
 	tar -C $TOOLS -xvf ${i}-cross.tgz
 	pushd $TOOLS/${i}-cross/${i}
@@ -49,7 +49,7 @@ tar -xvf libressl-3.0.2.tar.gz
 tar -xvf libssh2-1.9.0.tar.gz
 tar -xvf curl-7.69.0.tar.xz
 tar -xvf pkgconf-1.6.3.tar.xz
-for i in x86_64-linux-musl i486-linux-musl aarch64-linux-musl armv7l-linux-musleabihf arm-linux-musleabi; do
+for i in x86_64-linux-musl i486-linux-musl aarch64-linux-musl armv7l-linux-musleabihf arm-linux-musleabi mips-linux-musl mipsel-linux-musl powerpc64le-linux-musl powerpc64-linux-musl powerpc-linux-musl riscv64-linux-musl; do
 	cd $SRC/pkgconf-1.6.3
 	mkdir build-$i
 	cd build-$i
@@ -64,13 +64,13 @@ for i in x86_64-linux-musl i486-linux-musl aarch64-linux-musl armv7l-linux-musle
 	make $MKOPTS
 	make $MKOPTS install
 
-	ln -sf pkgconf $TOOLS/${i}-cross/bin/pkg-config
 	ln -sf pkgconf $TOOLS/${i}-cross/bin/$i-pkg-config
 	ln -sf pkgconf $TOOLS/${i}-cross/bin/$i-pkgconf
 
 	cd $SRC/libz-1.2.8.2015.12.26
 	mkdir build-$i
 	cd build-$i
+	CFLAGS="-fPIE -Os -g0 -s -pipe" \
 	../configure \
 		--build=$XHOST \
 		--host=$i \
@@ -82,6 +82,7 @@ for i in x86_64-linux-musl i486-linux-musl aarch64-linux-musl armv7l-linux-musle
 	cd $SRC/libressl-3.0.2
 	mkdir build-$i
 	cd build-$i
+	CFLAGS="-fPIE -Os -g0 -s -pipe" \
 	../configure \
 		--build=$XHOST \
 		--host=$i \
@@ -93,6 +94,7 @@ for i in x86_64-linux-musl i486-linux-musl aarch64-linux-musl armv7l-linux-musle
 	cd $SRC/libssh2-1.9.0
 	mkdir build-$i
 	cd build-$i
+	CFLAGS="-fPIE -Os -g0 -s -pipe" \
 	../configure \
 		--build=$XHOST \
 		--host=$i \
@@ -104,6 +106,7 @@ for i in x86_64-linux-musl i486-linux-musl aarch64-linux-musl armv7l-linux-musle
 	cd $SRC/curl-7.69.0
 	mkdir build-$i
 	cd build-$i
+	CFLAGS="-fPIE -Os -g0 -s -pipe" \
 	../configure \
 		--build=$XHOST \
 		--host=$i \
@@ -116,6 +119,8 @@ for i in x86_64-linux-musl i486-linux-musl aarch64-linux-musl armv7l-linux-musle
 		--disable-shared
 	make $MKOPTS
 	make $MKOPTS install
+
+	rm -rvf "$TOOLS/${i}-cross/${i}/lib/*.la"
 done
 
 cd $SRC
@@ -123,6 +128,7 @@ wget https://static.rust-lang.org/dist/rustc-$RUSTVER-src.tar.gz
 tar -xvf rustc-$RUSTVER-src.tar.gz
 cd rustc-$RUSTVER-src
 patch -Np1 -i $STUFF/musl-and-security.patch
+patch -Np1 -i $STUFF/riscv-musl.patch
 clear_vendor_checksums libc
 
 cat << EOF > config.toml
@@ -132,7 +138,7 @@ release-debuginfo = false
 assertions = false
 static-libstdcpp = true
 ninja = true
-targets = "AArch64;ARM;Mips;PowerPC;Sparc;X86"
+targets = "AArch64;ARM;PowerPC;RISCV;X86"
 experimental-targets = ""
 
 [build]
@@ -141,14 +147,26 @@ host = [
   "i586-unknown-linux-musl",
   "aarch64-unknown-linux-musl",
   "armv7-unknown-linux-musleabihf",
-  "armv5te-unknown-linux-musleabi"
+  "armv5te-unknown-linux-musleabi",
+  "mips-unknown-linux-musl",
+  "mipsel-unknown-linux-musl",
+  "powerpc64le-unknown-linux-musl",
+  "powerpc64-unknown-linux-musl",
+  "powerpc-unknown-linux-musl",
+  "riscv64gc-unknown-linux-musl"
 ]
 target = [
   "x86_64-unknown-linux-musl",
   "i586-unknown-linux-musl",
   "aarch64-unknown-linux-musl",
   "armv7-unknown-linux-musleabihf",
-  "armv5te-unknown-linux-musleabi"
+  "armv5te-unknown-linux-musleabi",
+  "mips-unknown-linux-musl",
+  "mipsel-unknown-linux-musl",
+  "powerpc64le-unknown-linux-musl",
+  "powerpc64-unknown-linux-musl",
+  "powerpc-unknown-linux-musl",
+  "riscv64gc-unknown-linux-musl"
 ]
 cargo = "$(which cargo)"
 rustc = "$(which rustc)"
@@ -161,6 +179,7 @@ verbose = 0
 sanitizers = false
 profiler = false
 vendor = true
+cargo-native-static = true
 
 [rust]
 channel = "stable"
@@ -210,8 +229,62 @@ cxx = "arm-linux-musleabi-g++"
 linker = "arm-linux-musleabi-gcc"
 musl-root = "$TOOLS/arm-linux-musleabi-cross/arm-linux-musleabi"
 crt-static = false
+
+[target.mips-unknown-linux-musl]
+cc = "mips-linux-musl-gcc"
+cxx = "mips-linux-musl-g++"
+linker = "mips-linux-musl-gcc"
+musl-root = "$TOOLS/mips-linux-musl-cross/mips-linux-musl"
+crt-static = false
+
+[target.mipsel-unknown-linux-musl]
+cc = "mipsel-linux-musl-gcc"
+cxx = "mipsel-linux-musl-g++"
+linker = "mipsel-linux-musl-gcc"
+musl-root = "$TOOLS/mipsel-linux-musl-cross/mipsel-linux-musl"
+crt-static = false
+
+[target.powerpc64le-unknown-linux-musl]
+cc = "powerpc64le-linux-musl-gcc"
+cxx = "powerpc64le-linux-musl-g++"
+linker = "powerpc64le-linux-musl-gcc"
+musl-root = "$TOOLS/powerpc64le-linux-musl-cross/powerpc64le-linux-musl"
+crt-static = false
+
+[target.powerpc64-unknown-linux-musl]
+cc = "powerpc64-linux-musl-gcc"
+cxx = "powerpc64-linux-musl-g++"
+linker = "powerpc64-linux-musl-gcc"
+musl-root = "$TOOLS/powerpc64-linux-musl-cross/powerpc64-linux-musl"
+crt-static = false
+
+[target.powerpc-unknown-linux-musl]
+cc = "powerpc-linux-musl-gcc"
+cxx = "powerpc-linux-musl-g++"
+linker = "powerpc-linux-musl-gcc"
+musl-root = "$TOOLS/powerpc-linux-musl-cross/powerpc-linux-musl"
+crt-static = false
+
+[target.riscv64gc-unknown-linux-musl]
+cc = "riscv64-linux-musl-gcc"
+cxx = "riscv64-linux-musl-g++"
+linker = "riscv64-linux-musl-gcc"
+musl-root = "$TOOLS/riscv64-linux-musl-cross/riscv64-linux-musl"
+crt-static = false
 EOF
 
 export RUST_BACKTRACE=1
+export X86_64_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="$TOOLS/x86_64-linux-musl-cross/x86_64-linux-musl"
+export I586_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="$TOOLS/i486-linux-musl-cross/i486-linux-musl"
+export AARCH64_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="$TOOLS/aarch64-linux-musl-cross/aarch64-linux-musl"
+export ARMV7L_UNKNOWN_LINUX_MUSLEABIHF_OPENSSL_DIR="$TOOLS/armv7l-linux-musleabihf-cross/armv7l-linux-musleabihf"
+export ARM_UNKNOWN_LINUX_MUSLEABI_OPENSSL_DIR="$TOOLS/arm-linux-musleabi-cross/arm-linux-musleabi"
+export MIPS_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="$TOOLS/mips-linux-musl-cross/mips-linux-musl"
+export MIPSEL_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="$TOOLS/mipsel-linux-musl-cross/mipsel-linux-musl"
+export POWERPC64LE_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="$TOOLS/powerpc64le-linux-musl-cross/powerpc64le-linux-musl"
+export POWERPC64_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="$TOOLS/powerpc64-linux-musl-cross/powerpc64-linux-musl"
+export POWERPC_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="$TOOLS/powerpc-linux-musl-cross/powerpc-linux-musl"
+export RISCV64GC_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="$TOOLS/riscv64-linux-musl-cross/riscv64-linux-musl"
 
 ./x.py dist -j$MKJOBS
+./x.py dist cargo -j$MKJOBS
