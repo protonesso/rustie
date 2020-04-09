@@ -10,15 +10,11 @@ mktoolchain() {
 	case $1 in
 		armv7)
 			make $MKOPTS TARGET=arm-linux-musleabihf GCC_CONFIG="--with-arch=armv7-a --with-fpu=vfpv3-d16"
-			make $MKOPTS OUTPUT=/usr/local TARGET=arm-linux-musleabihf GCC_CONFIG="--with-arch=armv7-a --with-fpu=vfpv3-d16" install
-			;;
-		armv5te)
-			make $MKOPTS TARGET=arm-linux-musleabi GCC_CONFIG="--with-arch=armv5te --with-float=soft"
-			make $MKOPTS OUTPUT=/usr/local TARGET=arm-linux-musleabi GCC_CONFIG="--with-arch=armv5te --with-float=soft" install
+			make $MKOPTS OUTPUT=/opt/rustie TARGET=arm-linux-musleabihf GCC_CONFIG="--with-arch=armv7-a --with-fpu=vfpv3-d16" install
 			;;
 		*)
 			make $MKOPTS TARGET=$i-linux-musl
-			make $MKOPTS OUTPUT=/usr/local TARGET=$i-linux-musl install
+			make $MKOPTS OUTPUT=/opt/rustie TARGET=$i-linux-musl install
 			;;
 	esac
 }
@@ -35,6 +31,7 @@ export LC_ALL="POSIX"
 export HOSTCC="gcc"
 export HOSTCXX="g++"
 export XHOST="$(echo ${MACHTYPE} | sed -e 's/-[^-]*/-cross/')"
+export PATH="/opt/rustie/bin:$PATH"
 
 if [ -z $MKOPTS ]; then
 	export MKJOBS="$(expr $(nproc) + 1)"
@@ -50,14 +47,14 @@ if [ "$TOOLCHAIN" != "no" ]; then
 	git clone https://github.com/richfelker/musl-cross-make.git --depth 1
 	cd musl-cross-make
 
-	for i in x86_64 i586 aarch64 armv7 armv5te; do
+	for i in x86_64 i586 aarch64 armv7; do
 		mktoolchain $i
 	done
 
 	cd $SRC
 	wget https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-3.0.2.tar.gz
 	tar -xvf libressl-3.0.2.tar.gz
-	for i in x86_64-linux-musl i586-linux-musl aarch64-linux-musl arm-linux-musleabihf arm-linux-musleabi; do
+	for i in x86_64-linux-musl i586-linux-musl aarch64-linux-musl arm-linux-musleabihf; do
 		cd $SRC/libressl-3.0.2
 		mkdir build-$i
 		cd build-$i
@@ -65,7 +62,7 @@ if [ "$TOOLCHAIN" != "no" ]; then
 		../configure \
 			--build=$XHOST \
 			--host=$i \
-			--prefix=/usr/local/$i \
+			--prefix=/opt/rustie/$i \
 			--disable-shared
 		make $MKOPTS
 		make $MKOPTS install
@@ -76,7 +73,10 @@ cd $SRC
 wget https://static.rust-lang.org/dist/rustc-$RUSTVER-src.tar.gz
 tar -xvf rustc-$RUSTVER-src.tar.gz
 cd rustc-$RUSTVER-src
-patch -Np1 -i $STUFF/musl-and-security.patch
+patch -Np1 -i $STUFF/musl.patch
+patch -Np1 -i $STUFF/need-ssp_nonshared.patch
+patch -Np1 -i "$STUFF/0006-Prefer-libgcc_eh-over-libunwind-for-musl.patch"
+patch -Np1 -i $STUFF/static-pie.patch
 clear_vendor_checksums libc
 
 cat << EOF > config.toml
@@ -94,85 +94,67 @@ host = [
   "x86_64-unknown-linux-musl",
   "i586-unknown-linux-musl",
   "aarch64-unknown-linux-musl",
-  "armv7-unknown-linux-musleabihf",
-  "armv5te-unknown-linux-musleabi"
-]
-target = [
-  "x86_64-unknown-linux-musl",
-  "i586-unknown-linux-musl",
-  "aarch64-unknown-linux-musl",
-  "armv7-unknown-linux-musleabihf",
-  "armv5te-unknown-linux-musleabi"
+  "armv7-unknown-linux-musleabihf"
 ]
 cargo = "$(which cargo)"
 rustc = "$(which rustc)"
 docs = false
-compiler-docs = false
-submodules = false
-full-bootstrap = false
+compiler-docs  = false
 extended = true
-verbose = 0
-sanitizers = false
-profiler = false
+submodules = false
+python = "python3"
+locked-deps = true
 vendor = true
 cargo-native-static = true
+sanitizers = false
+profiler = false
+full-bootstrap = false
 
 [rust]
-channel = "stable"
 default-linker = "gcc"
-rpath = false
+channel = "nightly"
+rpath  = false
 codegen-units = 1
-debuginfo-level = 2
-backtrace = true
+debuginfo-level = 0
+debug = false
+backtrace = false
 jemalloc = false
+debug-assertions = false
 codegen-tests = false
-optimize = true
-
-[dist]
-src-tarball = false
 
 [target.x86_64-unknown-linux-musl]
 cc = "x86_64-linux-musl-gcc"
 cxx = "x86_64-linux-musl-g++"
 linker = "x86_64-linux-musl-gcc"
-musl-root = "/usr/local/x86_64-linux-musl"
+musl-root = "/opt/rustie/x86_64-linux-musl"
 crt-static = false
 
 [target.i586-unknown-linux-musl]
 cc = "i586-linux-musl-gcc"
 cxx = "i586-linux-musl-g++"
 linker = "i586-linux-musl-gcc"
-musl-root = "/usr/local/i586-linux-musl"
+musl-root = "/opt/rustie/i586-linux-musl"
 crt-static = false
 
 [target.aarch64-unknown-linux-musl]
 cc = "aarch64-linux-musl-gcc"
 cxx = "aarch64-linux-musl-g++"
 linker = "aarch64-linux-musl-gcc"
-musl-root = "/usr/local/aarch64-linux-musl"
+musl-root = "/opt/rustie/aarch64-linux-musl"
 crt-static = false
 
 [target.armv7-unknown-linux-musleabihf]
 cc = "arm-linux-musleabihf-gcc"
 cxx = "arm-linux-musleabihf-g++"
 linker = "arm-linux-musleabihf-gcc"
-musl-root = "/usr/local/arm-linux-musleabihf"
-crt-static = false
-
-[target.armv5te-unknown-linux-musleabi]
-cc = "arm-linux-musleabi-gcc"
-cxx = "arm-linux-musleabi-g++"
-linker = "arm-linux-musleabi-gcc"
-musl-root = "/usr/local/arm-linux-musleabi"
+musl-root = "/opt/rustie/arm-linux-musleabihf"
 crt-static = false
 EOF
 
 export RUST_BACKTRACE=1
-export X86_64_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="/usr/local/x86_64-linux-musl"
-export I586_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="/usr/local/i586-linux-musl"
-export AARCH64_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="/usr/local/aarch64-linux-musl"
-export ARMV7L_UNKNOWN_LINUX_MUSLEABIHF_OPENSSL_DIR="/usr/local/arm-linux-musleabihf"
-export ARMV5TE_UNKNOWN_LINUX_MUSLEABI_OPENSSL_DIR="/usr/local/arm-linux-musleabi"
+export X86_64_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="/opt/rustie/x86_64-linux-musl"
+export I586_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="/opt/rustie/i586-linux-musl"
+export AARCH64_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="/opt/rustie/aarch64-linux-musl"
+export ARMV7L_UNKNOWN_LINUX_MUSLEABIHF_OPENSSL_DIR="/opt/rustie/arm-linux-musleabihf"
 
 ./x.py dist -j$MKJOBS
-./x.py dist cargo -j$MKJOBS
