@@ -47,14 +47,14 @@ if [ "$TOOLCHAIN" != "no" ]; then
 	git clone https://github.com/richfelker/musl-cross-make.git --depth 1
 	cd musl-cross-make
 
-	for i in x86_64 i586 aarch64 armv7; do
+	for i in x86_64 i586 aarch64 armv7 powerpc64le powerpc64 powerpc; do
 		mktoolchain $i
 	done
 
 	cd $SRC
 	wget https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-3.0.2.tar.gz
 	tar -xvf libressl-3.0.2.tar.gz
-	for i in x86_64-linux-musl i586-linux-musl aarch64-linux-musl arm-linux-musleabihf; do
+	for i in x86_64-linux-musl i586-linux-musl aarch64-linux-musl arm-linux-musleabihf powerpc64le-linux-musl powerpc64-linux-musl powerpc-linux-musl; do
 		cd $SRC/libressl-3.0.2
 		mkdir build-$i
 		cd build-$i
@@ -88,7 +88,7 @@ release-debuginfo = false
 assertions = false
 static-libstdcpp = true
 ninja = true
-targets = "AArch64;ARM;X86"
+targets = "AArch64;ARM;X86;PowerPC"
 experimental-targets = ""
 
 [build]
@@ -96,7 +96,10 @@ host = [
   "x86_64-unknown-linux-musl",
   "i586-unknown-linux-musl",
   "aarch64-unknown-linux-musl",
-  "armv7-unknown-linux-musleabihf"
+  "armv7-unknown-linux-musleabihf",
+  "powerpc64le-unknown-linux-musl",
+  "powerpc64-unknown-linux-musl",
+  "powerpc-unknown-linux-musl"
 ]
 cargo = "$(which cargo)"
 rustc = "$(which rustc)"
@@ -113,7 +116,6 @@ profiler = false
 full-bootstrap = false
 
 [rust]
-default-linker = "gcc"
 channel = "nightly"
 rpath  = false
 codegen-units = 1
@@ -151,6 +153,25 @@ cxx = "arm-linux-musleabihf-g++"
 linker = "arm-linux-musleabihf-gcc"
 musl-root = "/opt/rustie/arm-linux-musleabihf"
 crt-static = false
+
+[target.powerpc64le-unknown-linux-musl]
+cc = "powerpc64le-linux-musl-gcc"
+cxx = "powerpc64le-linux-musl-g++"
+linker = "powerpc64le-linux-musl-gcc"
+musl-root = "/opt/rustie/powerpc64le-linux-musl"
+crt-static = false
+[target.powerpc64-unknown-linux-musl]
+cc = "powerpc64-linux-musl-gcc"
+cxx = "powerpc64-linux-musl-g++"
+linker = "powerpc64-linux-musl-gcc"
+musl-root = "/opt/rustie/powerpc64-linux-musl"
+crt-static = false
+[target.powerpc-unknown-linux-musl]
+cc = "powerpc-linux-musl-gcc"
+cxx = "powerpc-linux-musl-g++"
+linker = "powerpc-linux-musl-gcc"
+musl-root = "/opt/rustie/powerpc-linux-musl"
+crt-static = false
 EOF
 
 export RUST_BACKTRACE=1
@@ -158,5 +179,8 @@ export X86_64_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="/opt/rustie/x86_64-linux-musl"
 export I586_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="/opt/rustie/i586-linux-musl"
 export AARCH64_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="/opt/rustie/aarch64-linux-musl"
 export ARMV7L_UNKNOWN_LINUX_MUSLEABIHF_OPENSSL_DIR="/opt/rustie/arm-linux-musleabihf"
+export POWERPC64LE_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="/opt/rustie/powerpc64le-linux-musl"
+export POWERPC64_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="/opt/rustie/powerpc64-linux-musl"
+export POWERPC_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="/opt/rustie/powerpc-linux-musl"
 
 ./x.py dist -j$MKJOBS
