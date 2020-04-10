@@ -75,9 +75,11 @@ tar -xvf rustc-$RUSTVER-src.tar.gz
 cd rustc-$RUSTVER-src
 patch -Np1 -i $STUFF/musl.patch
 patch -Np1 -i $STUFF/need-ssp_nonshared.patch
-patch -Np1 -i "$STUFF/0006-Prefer-libgcc_eh-over-libunwind-for-musl.patch"
+patch -Np1 -i $STUFF/0006-Prefer-libgcc_eh-over-libunwind-musl.patch
+patch -Np1 -i $STUFF/0001-openssl-src-add-Ataraxia-s-targets.patch
 patch -Np1 -i $STUFF/static-pie.patch
 clear_vendor_checksums libc
+clear_vendor_checksums openssl-src
 
 cat << EOF > config.toml
 [llvm]
