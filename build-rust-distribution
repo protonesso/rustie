@@ -51,14 +51,14 @@ if [ "$TOOLCHAIN" != "no" ]; then
 	git clone https://github.com/richfelker/musl-cross-make.git --depth 1
 	cd musl-cross-make
 
-	for i in x86_64 i586 aarch64 armv7 armv6; do
+	for i in x86_64 i686 aarch64 armv7 armv6; do
 		mktoolchain $i
 	done
 
 	cd $SRC
 	wget https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-3.0.2.tar.gz
 	tar -xvf libressl-3.0.2.tar.gz
-	for i in x86_64-linux-musl i586-linux-musl aarch64-linux-musl armv7l-linux-musleabihf armv6l-linux-musleabihf; do
+	for i in x86_64-linux-musl i686-linux-musl aarch64-linux-musl armv7l-linux-musleabihf armv6l-linux-musleabihf; do
 		case $i in
 			arm*)
 				asm="--disable-asm"
@@ -139,11 +139,11 @@ linker = "x86_64-linux-musl-gcc"
 musl-root = "/opt/rustie/x86_64-linux-musl"
 crt-static = false
 
-[target.i586-unknown-linux-musl]
-cc = "i586-linux-musl-gcc"
-cxx = "i586-linux-musl-g++"
-linker = "i586-linux-musl-gcc"
-musl-root = "/opt/rustie/i586-linux-musl"
+[target.i686-unknown-linux-musl]
+cc = "i686-linux-musl-gcc"
+cxx = "i686-linux-musl-g++"
+linker = "i686-linux-musl-gcc"
+musl-root = "/opt/rustie/i686-linux-musl"
 crt-static = false
 
 [target.aarch64-unknown-linux-musl]
