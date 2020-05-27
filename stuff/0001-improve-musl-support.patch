@@ -1,6 +1,6 @@
-From 4c9bb3f95a8ce345a8ef78f5ade8111292edc3b9 Mon Sep 17 00:00:00 2001
+From 4852ce9e415d6f95320354b61ea5d326dbc163ee Mon Sep 17 00:00:00 2001
 From: Ishimoto Shinobu <nagakamira@gmail.com>
-Date: Sun, 26 Apr 2020 15:53:23 +0300
+Date: Thu, 28 May 2020 02:05:57 +0900
 Subject: [PATCH] improve musl support
 
 Signed-off-by: Ishimoto Shinobu <nagakamira@gmail.com>
@@ -8,10 +8,10 @@ Signed-off-by: Ishimoto Shinobu <nagakamira@gmail.com>
  src/bootstrap/compile.rs                    | 16 ----------------
  src/librustc_target/spec/linux_musl_base.rs |  2 +-
  src/libstd/build.rs                         |  2 ++
- src/libunwind/build.rs                      | 16 ++--------------
+ src/libunwind/build.rs                      | 14 +-------------
  src/libunwind/lib.rs                        |  2 +-
  vendor/libc/src/unix/mod.rs                 |  7 -------
- 6 files changed, 6 insertions(+), 39 deletions(-)
+ 6 files changed, 5 insertions(+), 38 deletions(-)
 
 diff --git a/src/bootstrap/compile.rs b/src/bootstrap/compile.rs
 index 65a00db33..0c3676858 100644
@@ -67,16 +67,10 @@ index 8db7bc12c..77ae0541e 100644
      } else if target.contains("freebsd") {
          println!("cargo:rustc-link-lib=execinfo");
 diff --git a/src/libunwind/build.rs b/src/libunwind/build.rs
-index a24808b32..3f16f3dac 100644
+index a24808b32..29292cd46 100644
 --- a/src/libunwind/build.rs
 +++ b/src/libunwind/build.rs
-@@ -5,15 +5,12 @@ fn main() {
-     let target = env::var("TARGET").expect("TARGET was not set");
- 
-     if cfg!(feature = "llvm-libunwind")
--        && ((target.contains("linux") && !target.contains("musl")) || target.contains("fuchsia"))
-+        && ((target.contains("linux") || target.contains("fuchsia"))
-     {
+@@ -10,10 +10,7 @@ fn main() {
          // Build the unwinding from libunwind C/C++ source code.
          llvm_libunwind::compile();
      } else if target.contains("linux") {
@@ -136,5 +130,5 @@ index 238da24b5..1cbe84b36 100644
          #[link(name = "c")]
          extern {}
 -- 
-2.25.4
+2.26.2
 
