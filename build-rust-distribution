@@ -89,6 +89,7 @@ patch -Np1 -i "$STUFF"/1.42.0-libressl.patch
 patch -Np1 -i "$STUFF"/1.43.0-llvm10.patch
 clear_vendor_checksums libc
 clear_vendor_checksums openssl-src
+clear_vendor_checksums openssl-sys
 
 cat << EOF > config.toml
 [llvm]
