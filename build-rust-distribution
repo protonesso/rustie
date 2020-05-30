@@ -104,7 +104,7 @@ host = [
   "x86_64-unknown-linux-musl",
   "i686-unknown-linux-musl",
   "aarch64-unknown-linux-musl",
-  "thumbv7neon-unknown-linux-musleabihf",
+  "armv7-unknown-linux-musleabihf",
   "arm-unknown-linux-musleabihf",
 ]
 cargo = "$(which cargo)"
@@ -153,7 +153,7 @@ linker = "aarch64-linux-musl-gcc"
 musl-root = "/opt/rustie/aarch64-linux-musl"
 crt-static = false
 
-[target.thumbv7neon-unknown-linux-musleabihf]
+[target.armv7-unknown-linux-musleabihf]
 cc = "armv7l-linux-musleabihf-gcc"
 cxx = "armv7l-linux-musleabihf-g++"
 linker = "armv7l-linux-musleabihf-gcc"
@@ -172,7 +172,7 @@ export RUST_BACKTRACE=1
 export X86_64_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="/opt/rustie/x86_64-linux-musl"
 export I686_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="/opt/rustie/i686-linux-musl"
 export AARCH64_UNKNOWN_LINUX_MUSL_OPENSSL_DIR="/opt/rustie/aarch64-linux-musl"
-export THUMBV7NEON_UNKNOWN_LINUX_MUSLEABIHF_OPENSSL_DIR="/opt/rustie/armv7l-linux-musleabihf"
+export ARMV7_UNKNOWN_LINUX_MUSLEABIHF_OPENSSL_DIR="/opt/rustie/armv7l-linux-musleabihf"
 export ARM_UNKNOWN_LINUX_MUSLEABIHF_OPENSSL_DIR="/opt/rustie/armv6l-linux-musleabihf"
 
 ./x.py dist -j$MKJOBS
